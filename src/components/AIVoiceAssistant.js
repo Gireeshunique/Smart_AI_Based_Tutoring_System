@@ -1,93 +1,119 @@
 import { useRef, useState } from "react";
 import "./AIVoiceAssistant.css";
 
+/* ===============================
+   WORD NORMALIZER (MUST MATCH UI)
+================================ */
+const normalizeWords = (text) =>
+  text
+    .replace(/[.,!?;:()"']/g, "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .split(" ");
+
+/* ===============================
+   WORD → CHAR MAP
+================================ */
+const buildWordCharMap = (text) => {
+  const words = normalizeWords(text);
+  let charIndex = 0;
+
+  return words.map((word) => {
+    const start = text.indexOf(word, charIndex);
+    charIndex = start + word.length;
+    return { start };
+  });
+};
+
 function AIVoiceAssistant({ pdfText, setActiveWord }) {
   const [voiceType, setVoiceType] = useState("female");
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
 
-  const utteranceRef = useRef(null);
-  const currentWordIndexRef = useRef(null);
- 
+  const currentWordIndexRef = useRef(0);
+  const wordCharMapRef = useRef([]);
+
   /* ---------- WAIT FOR VOICES ---------- */
   const waitForVoices = () =>
-    new Promise(resolve => {
-      let voices = speechSynthesis.getVoices();
-      if (voices.length) return resolve(voices);
-      speechSynthesis.onvoiceschanged = () => resolve(speechSynthesis.getVoices());
+    new Promise((resolve) => {
+      const voices = speechSynthesis.getVoices();
+      if (voices.length) resolve(voices);
+      speechSynthesis.onvoiceschanged = () =>
+        resolve(speechSynthesis.getVoices());
     });
 
   const getVoice = (voices) =>
-    voices.find(v =>
+    voices.find((v) =>
       voiceType === "female"
         ? v.name.toLowerCase().includes("female")
         : v.name.toLowerCase().includes("male")
     ) || voices[0];
 
-  /* ---------- SPEAK FROM WORD ---------- */
-  const speakFromWord = async (startIndex) => {
+  /* ---------- SPEAK FROM INDEX ---------- */
+  const speakFromIndex = async (startIndex) => {
     if (!pdfText) return;
 
+    speechSynthesis.cancel();
+
     const voices = await waitForVoices();
-    const words = pdfText.split(" ");
-    const remainingText = words.slice(startIndex).join(" ");
+    const utterance = new SpeechSynthesisUtterance(pdfText);
 
-    const utterance = new SpeechSynthesisUtterance(remainingText);
     utterance.voice = getVoice(voices);
+    utterance.rate = 1;
+    utterance.pitch = 1;
 
-    let localIndex = startIndex;
+    wordCharMapRef.current = buildWordCharMap(pdfText);
+    currentWordIndexRef.current = startIndex;
 
-    utterance.onboundary = (e) => {
-      if (e.name === "word") {
-        setActiveWord(localIndex);
-        currentWordIndexRef.current = localIndex;
-        localIndex++;
-      }
-    };
+   utterance.onboundary = (event) => {
+  const charPos = event.charIndex || 0;
+
+  const index = wordCharMapRef.current.findIndex(
+    (w, i) =>
+      charPos >= w.start &&
+      (i === wordCharMapRef.current.length - 1 ||
+        charPos < wordCharMapRef.current[i + 1].start)
+  );
+
+  if (index !== -1) {
+    currentWordIndexRef.current = index;
+    setActiveWord(index);
+  }
+};
 
     utterance.onend = () => {
       setIsSpeaking(false);
       setIsPaused(false);
       setActiveWord(-1);
+      currentWordIndexRef.current = 0;
     };
 
-    utteranceRef.current = utterance;
     speechSynthesis.speak(utterance);
+    setIsSpeaking(true);
   };
 
   /* ▶ START */
   const startReading = () => {
-    if (!pdfText) return;
-
-    speechSynthesis.cancel();
     currentWordIndexRef.current = 0;
-    setIsSpeaking(true);
-    setIsPaused(false);
     setActiveWord(-1);
-
-    speakFromWord(0);
+    setIsPaused(false);
+    speakFromIndex(0);
   };
 
-  /* ⏸ PAUSE */
+  /* ⏸ PAUSE (CANCEL + SAVE POSITION) */
   const pauseReading = () => {
-    if (!isSpeaking) return;
-
-    speechSynthesis.cancel(); // stop current utterance
+    speechSynthesis.cancel();
     setIsSpeaking(false);
     setIsPaused(true);
   };
 
-  /* ▶ RESUME (FIXED) */
+  /* ▶ RESUME (RESTART FROM WORD) */
   const resumeReading = () => {
-    if (!isPaused) return;
-
     setIsPaused(false);
-    setIsSpeaking(true);
-
-    speakFromWord(currentWordIndexRef.current);
+    speakFromIndex(currentWordIndexRef.current);
   };
 
-  /* ⏹ STOP (RESET) */
+  /* ⏹ STOP */
   const stopReading = () => {
     speechSynthesis.cancel();
     setIsSpeaking(false);
@@ -98,9 +124,9 @@ function AIVoiceAssistant({ pdfText, setActiveWord }) {
 
   return (
     <div className="ai-panel">
-
       <select
-        onChange={e => setVoiceType(e.target.value)}
+        value={voiceType}
+        onChange={(e) => setVoiceType(e.target.value)}
         disabled={isSpeaking}
       >
         <option value="female">Female Voice</option>
@@ -122,17 +148,6 @@ function AIVoiceAssistant({ pdfText, setActiveWord }) {
       <button onClick={stopReading} disabled={!isSpeaking && !isPaused}>
         ⏹ Stop
       </button>
-
-      <div className={`ai-icon-wrapper ${isSpeaking ? "ai-speaking" : ""}`}>
-        <div className="ai-icon">
-          <img
-            src="/teacher-avatar.png"
-            alt="AI Teacher"
-            className="teacher-avatar"
-          />
-        </div>
-      </div>
-
     </div>
   );
 }

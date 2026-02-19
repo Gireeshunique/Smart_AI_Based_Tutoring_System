@@ -4,15 +4,12 @@ import AIVoiceAssistant from "./components/AIVoiceAssistant";
 
 function App() {
   const [pdfText, setPdfText] = useState("");
-  const [pdfUrl, setPdfUrl] = useState(null);
-  const [activeWord, setActiveWord] = useState(-1);
   const [words, setWords] = useState([]);
+  const [activeWord, setActiveWord] = useState(-1);
 
   return (
-    <>
+    <><div className="app-layout">
       <PDFViewer
-        pdfUrl={pdfUrl}
-        setPdfUrl={setPdfUrl}
         setPdfText={setPdfText}
         words={words}
         setWords={setWords}
@@ -22,7 +19,7 @@ function App() {
       <AIVoiceAssistant
         pdfText={pdfText}
         setActiveWord={setActiveWord}
-      />
+      /></div>
     </>
   );
 }

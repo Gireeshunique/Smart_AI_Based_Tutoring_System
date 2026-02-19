@@ -3,25 +3,28 @@
 ================================ */
 body {
   margin: 0;
-  background: linear-gradient(135deg, #eef2ff, #f8fafc);
   font-family: "Inter", system-ui, sans-serif;
+  background: linear-gradient(135deg, #eef2ff, #f8fafc);
   color: #1f2937;
 }
 
 /* ===============================
-   MAIN PDF CONTAINER
-   (SPACE RESERVED FOR AI PANEL)
+   MAIN APP LAYOUT (80 / 20)
+================================ */
+.app-layout {
+  display: flex;
+  height: 100vh;
+  width: 100%;
+}
+
+/* ===============================
+   PDF VIEWER SIDE (80%)
 ================================ */
 .pdf-container {
-  max-width: 1200px;
-  margin: 24px auto;
-  margin-right: 320px; /* space for fixed AI panel */
-  padding: 20px;
-
+  flex: 8;                 /* 80% */
+  padding: 24px;
+  overflow-y: auto;
   background: #ffffff;
-  border-radius: 18px;
-  border: 1px solid #e5e7eb;
-  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.08);
 }
 
 /* ===============================
@@ -41,7 +44,7 @@ body {
 }
 
 /* ===============================
-   PDF VIEW
+   PDF PREVIEW
 ================================ */
 .pdf-inner {
   width: 100%;
@@ -52,104 +55,75 @@ body {
   width: 100%;
   height: 65vh;
   border: none;
-  border-radius: 16px;
-  background: #ffffff;
-  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.12);
+  border-radius: 14px;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
 }
 
 /* ===============================
-   PDF PLACEHOLDER
+   PLACEHOLDER
 ================================ */
 .pdf-placeholder {
   height: 65vh;
   display: flex;
   align-items: center;
   justify-content: center;
-
-  border-radius: 16px;
   border: 2px dashed #d1d5db;
-  background: #ffffff;
+  border-radius: 14px;
   color: #9ca3af;
-  font-size: 16px;
 }
 
 /* ===============================
-   EXTRACTED TEXT
+   EXTRACTED TEXT AREA
 ================================ */
 .pdf-text-outside {
-  width: 100%;
-  max-width: 95%;
   margin-top: 18px;
-
   height: 30vh;
-  padding: 22px 26px;
-
+  padding: 20px;
   overflow-y: auto;
-  overflow-x: hidden;
-
-  background: #ffffff;
-  border-radius: 16px;
+  background: #f9fafb;
+  border-radius: 14px;
   border: 1px solid #e5e7eb;
-
   font-size: 16px;
-  line-height: 1.85;
-  text-align: left;
-
-  white-space: normal;
-  word-break: break-word;
-
-  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.07);
+  line-height: 1.8;
+  scroll-behavior: smooth;
 }
 
-/* ===============================
-   WORD SPANS
-================================ */
+/* WORD SPANS */
 .pdf-text-outside span {
-  display: inline;
   padding: 2px 4px;
-  border-radius: 5px;
+  border-radius: 4px;
 }
 
-/* ===============================
-   ACTIVE WORD HIGHLIGHT
-================================ */
+/* WORD HIGHLIGHT */
 .pdf-text-outside .word-highlight {
   background: linear-gradient(90deg, #fde047, #facc15);
-  color: #111827;
   font-weight: 700;
-
+  color: #111827;
   padding: 2px 6px;
   border-radius: 6px;
-
   box-shadow: 0 0 0 2px rgba(250, 204, 21, 0.35);
 }
 
 /* ===============================
-   SCROLLBAR (CLEAN)
-================================ */
-.pdf-text-outside::-webkit-scrollbar {
-  width: 8px;
-}
-
-.pdf-text-outside::-webkit-scrollbar-thumb {
-  background: #d1d5db;
-  border-radius: 8px;
-}
-
-.pdf-text-outside::-webkit-scrollbar-thumb:hover {
-  background: #9ca3af;
-}
-
-/* ===============================
-   RESPONSIVE
+   RESPONSIVE (MOBILE)
 ================================ */
 @media (max-width: 900px) {
+  .app-layout {
+    flex-direction: column;
+  }
+
+  .pdf-container,
+  .ai-panel {
+    flex: none;
+    width: 100%;
+    height: auto;
+  }
+
   .pdf-frame {
     height: 50vh;
   }
 
   .pdf-text-outside {
     height: 40vh;
-    padding: 18px;
   }
 }
