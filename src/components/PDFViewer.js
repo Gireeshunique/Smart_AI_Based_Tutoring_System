@@ -5,32 +5,41 @@ import "./PDFViewer.css";
 /* ===============================
    TEXT CLEANER
 ================================ */
-const cleanExtractedText = (text) =>
-  text
-    .replace(/\r?\n+/g, " ")
-    .replace(/\s{2,}/g, " ")
-    .replace(/-\s+/g, "")
+const cleanExtractedText = (text) => {
+  if (!text || typeof text !== "string") return "";
+
+  return text
     .replace(/\f/g, " ")
+    .replace(/-\s*\n\s*/g, "")
+    .replace(/[\r\n\t]+/g, " ")
+    .replace(/\u00A0/g, " ")
+    .replace(/\s+/g, " ")
+    .replace(/\s([.,!?;:])/g, "$1")
     .trim();
+};
 
 /* ===============================
-   WORD NORMALIZER
+   SHARED WORD EXTRACTOR
+   (IMPORTANT - MUST MATCH AI FILE)
 ================================ */
-const normalizeWords = (text) =>
-  text
-    .replace(/[.,!?;:()"']/g, "")
-    .replace(/\s+/g, " ")
+const getWordArray = (text) => {
+  if (!text || typeof text !== "string") return [];
+
+  return text
+    .toLowerCase()
+    .replace(/[^\w\s]/g, "")
     .trim()
-    .split(" ");
+    .split(/\s+/);
+};
 
 function PDFViewer({ setPdfText, words, setWords, activeWord }) {
   const [pdfUrl, setPdfUrl] = useState(null);
   const [isReady, setIsReady] = useState(false);
-
   const wordRefs = useRef([]);
-  const prevWordRef = useRef(null);
 
-  /* ========== UPLOAD PDF ========== */
+  /* ===============================
+     UPLOAD PDF
+  ================================= */
   const uploadPDF = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -43,39 +52,40 @@ function PDFViewer({ setPdfText, words, setWords, activeWord }) {
     const formData = new FormData();
     formData.append("file", file);
 
-    const res = await axios.post(
-      "http://localhost:5000/upload",
-      formData,
-      { headers: { "Content-Type": "multipart/form-data" } }
-    );
+    try {
+      const res = await axios.post(
+        "http://localhost:5000/upload",
+        formData,
+        { headers: { "Content-Type": "multipart/form-data" } }
+      );
 
-    setPdfUrl(res.data.pdf_url);
+      setPdfUrl(res.data.pdf_url);
 
-    const rawText = res.data.pages.map((p) => p.text).join(" ");
-    const cleanedText = cleanExtractedText(rawText);
+      const rawText = res.data.pages.map((p) => p.text).join(" ");
+      const cleanedText = cleanExtractedText(rawText);
 
-    setPdfText(cleanedText);
-    setWords(normalizeWords(cleanedText));
-    setIsReady(true);
+      setPdfText(cleanedText);
+      setWords(getWordArray(cleanedText));
+      setIsReady(true);
+    } catch (error) {
+      console.error("Upload failed:", error);
+    }
   };
 
-  /* ========== WORD HIGHLIGHT + SCROLL ========== */
+  /* ===============================
+     AUTO SCROLL TO ACTIVE WORD
+  ================================= */
   useEffect(() => {
-    if (!isReady || activeWord < 0 || activeWord >= words.length) return;
+    if (!isReady) return;
+    if (activeWord < 0 || activeWord >= words.length) return;
 
     const el = wordRefs.current[activeWord];
     if (!el) return;
 
-    prevWordRef.current?.classList.remove("word-highlight");
-    el.classList.add("word-highlight");
-    prevWordRef.current = el;
-
     el.scrollIntoView({
-  behavior: "smooth",
-  block: "center",
-  inline: "nearest",
-});
-
+      behavior: "smooth",
+      block: "center",
+    });
   }, [activeWord, isReady, words.length]);
 
   return (
@@ -101,7 +111,11 @@ function PDFViewer({ setPdfText, words, setWords, activeWord }) {
       {isReady && (
         <div className="pdf-text-outside">
           {words.map((word, i) => (
-            <span key={i} ref={(el) => (wordRefs.current[i] = el)}>
+            <span
+              key={i}
+              ref={(el) => (wordRefs.current[i] = el)}
+              className={i === activeWord ? "word-highlight" : ""}
+            >
               {word}{" "}
             </span>
           ))}

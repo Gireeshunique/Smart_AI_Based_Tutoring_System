@@ -21,31 +21,25 @@ body {
    PDF VIEWER SIDE (80%)
 ================================ */
 .pdf-container {
-  flex: 8;                 /* 80% */
+  flex: 8; /* 80% */
   padding: 24px;
   overflow-y: auto;
   background: #ffffff;
 }
 
-/* ===============================
-   HEADER
-================================ */
+/* HEADER */
 .pdf-container h2 {
   margin-bottom: 14px;
   font-size: 22px;
   font-weight: 600;
 }
 
-/* ===============================
-   FILE INPUT
-================================ */
+/* FILE INPUT */
 .pdf-container input[type="file"] {
   margin-bottom: 16px;
 }
 
-/* ===============================
-   PDF PREVIEW
-================================ */
+/* PDF PREVIEW */
 .pdf-inner {
   width: 100%;
   margin-bottom: 20px;
@@ -59,9 +53,7 @@ body {
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
 }
 
-/* ===============================
-   PLACEHOLDER
-================================ */
+/* PLACEHOLDER */
 .pdf-placeholder {
   height: 65vh;
   display: flex;
@@ -72,9 +64,7 @@ body {
   color: #9ca3af;
 }
 
-/* ===============================
-   EXTRACTED TEXT AREA
-================================ */
+/* EXTRACTED TEXT AREA */
 .pdf-text-outside {
   margin-top: 18px;
   height: 30vh;
@@ -112,9 +102,7 @@ body {
     flex-direction: column;
   }
 
-  .pdf-container,
-  .ai-panel {
-    flex: none;
+  .pdf-container {
     width: 100%;
     height: auto;
   }

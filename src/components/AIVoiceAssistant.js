@@ -2,27 +2,17 @@ import { useRef, useState } from "react";
 import "./AIVoiceAssistant.css";
 
 /* ===============================
-   WORD NORMALIZER (MUST MATCH UI)
+   SAME WORD EXTRACTOR
+   (MUST MATCH PDF FILE)
 ================================ */
-const normalizeWords = (text) =>
-  text
-    .replace(/[.,!?;:()"']/g, "")
-    .replace(/\s+/g, " ")
+const getWordArray = (text) => {
+  if (!text || typeof text !== "string") return [];
+
+  return text
+    .toLowerCase()
+    .replace(/[^\w\s]/g, "")
     .trim()
-    .split(" ");
-
-/* ===============================
-   WORD → CHAR MAP
-================================ */
-const buildWordCharMap = (text) => {
-  const words = normalizeWords(text);
-  let charIndex = 0;
-
-  return words.map((word) => {
-    const start = text.indexOf(word, charIndex);
-    charIndex = start + word.length;
-    return { start };
-  });
+    .split(/\s+/);
 };
 
 function AIVoiceAssistant({ pdfText, setActiveWord }) {
@@ -31,9 +21,7 @@ function AIVoiceAssistant({ pdfText, setActiveWord }) {
   const [isPaused, setIsPaused] = useState(false);
 
   const currentWordIndexRef = useRef(0);
-  const wordCharMapRef = useRef([]);
 
-  /* ---------- WAIT FOR VOICES ---------- */
   const waitForVoices = () =>
     new Promise((resolve) => {
       const voices = speechSynthesis.getVoices();
@@ -49,38 +37,43 @@ function AIVoiceAssistant({ pdfText, setActiveWord }) {
         : v.name.toLowerCase().includes("male")
     ) || voices[0];
 
-  /* ---------- SPEAK FROM INDEX ---------- */
-  const speakFromIndex = async (startIndex) => {
-    if (!pdfText) return;
+  /* ===============================
+     SPEAK FUNCTION
+  ================================= */
+const speakFromIndex = async (startIndex) => {
+  if (!pdfText) return;
 
-    speechSynthesis.cancel();
+  speechSynthesis.cancel();
 
-    const voices = await waitForVoices();
-    const utterance = new SpeechSynthesisUtterance(pdfText);
+  const voices = await waitForVoices();
 
-    utterance.voice = getVoice(voices);
-    utterance.rate = 1;
-    utterance.pitch = 1;
+  // 🔥 Split full words
+  const allWords = getWordArray(pdfText);
 
-    wordCharMapRef.current = buildWordCharMap(pdfText);
-    currentWordIndexRef.current = startIndex;
+  // 🔥 Get remaining words from paused index
+  const remainingWords = allWords.slice(startIndex);
 
-   utterance.onboundary = (event) => {
-  const charPos = event.charIndex || 0;
+  const remainingText = remainingWords.join(" ");
 
-  const index = wordCharMapRef.current.findIndex(
-    (w, i) =>
-      charPos >= w.start &&
-      (i === wordCharMapRef.current.length - 1 ||
-        charPos < wordCharMapRef.current[i + 1].start)
-  );
+  const utterance = new SpeechSynthesisUtterance(remainingText);
 
-  if (index !== -1) {
-    currentWordIndexRef.current = index;
-    setActiveWord(index);
-  }
-};
+  utterance.voice = getVoice(voices);
+  utterance.rate = 0.85;
+  utterance.pitch = 1;
 
+  utterance.onboundary = (event) => {
+    if (typeof event.charIndex === "number") {
+
+      const spokenText = remainingText.substring(0, event.charIndex);
+
+      const spokenWords = getWordArray(spokenText);
+
+      const index = startIndex + spokenWords.length;
+
+      currentWordIndexRef.current = index;
+      setActiveWord(index);
+    }
+  };
     utterance.onend = () => {
       setIsSpeaking(false);
       setIsPaused(false);
@@ -100,14 +93,14 @@ function AIVoiceAssistant({ pdfText, setActiveWord }) {
     speakFromIndex(0);
   };
 
-  /* ⏸ PAUSE (CANCEL + SAVE POSITION) */
+  /* ⏸ PAUSE */
   const pauseReading = () => {
     speechSynthesis.cancel();
     setIsSpeaking(false);
     setIsPaused(true);
   };
 
-  /* ▶ RESUME (RESTART FROM WORD) */
+  /* ▶ RESUME */
   const resumeReading = () => {
     setIsPaused(false);
     speakFromIndex(currentWordIndexRef.current);
