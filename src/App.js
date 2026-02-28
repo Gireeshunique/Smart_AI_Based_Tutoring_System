@@ -6,7 +6,7 @@ function App() {
   const [pdfText, setPdfText] = useState("");
   const [words, setWords] = useState([]);
   const [activeWord, setActiveWord] = useState(-1);
-
+  
   return (
     <><div className="app-layout">
       <PDFViewer
@@ -15,7 +15,6 @@ function App() {
         setWords={setWords}
         activeWord={activeWord}
       />
-
       <AIVoiceAssistant
         pdfText={pdfText}
         setActiveWord={setActiveWord}

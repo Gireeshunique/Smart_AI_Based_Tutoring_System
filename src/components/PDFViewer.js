@@ -20,7 +20,6 @@ const cleanExtractedText = (text) => {
 
 /* ===============================
    SHARED WORD EXTRACTOR
-   (IMPORTANT - MUST MATCH AI FILE)
 ================================ */
 const getWordArray = (text) => {
   if (!text || typeof text !== "string") return [];
@@ -35,6 +34,8 @@ const getWordArray = (text) => {
 function PDFViewer({ setPdfText, words, setWords, activeWord }) {
   const [pdfUrl, setPdfUrl] = useState(null);
   const [isReady, setIsReady] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageBoundaries, setPageBoundaries] = useState([]);  // ✅ fixed
   const wordRefs = useRef([]);
 
   /* ===============================
@@ -48,6 +49,7 @@ function PDFViewer({ setPdfText, words, setWords, activeWord }) {
     setWords([]);
     setPdfText("");
     wordRefs.current = [];
+    setCurrentPage(1);
 
     const formData = new FormData();
     formData.append("file", file);
@@ -61,6 +63,19 @@ function PDFViewer({ setPdfText, words, setWords, activeWord }) {
 
       setPdfUrl(res.data.pdf_url);
 
+      // 🔥 Calculate page boundaries
+      const pageWordCounts = res.data.pages.map((p) =>
+        getWordArray(cleanExtractedText(p.text)).length
+      );
+
+      let cumulative = 0;
+      const boundaries = pageWordCounts.map((count) => {
+        cumulative += count;
+        return cumulative;
+      });
+
+      setPageBoundaries(boundaries);
+
       const rawText = res.data.pages.map((p) => p.text).join(" ");
       const cleanedText = cleanExtractedText(rawText);
 
@@ -73,7 +88,7 @@ function PDFViewer({ setPdfText, words, setWords, activeWord }) {
   };
 
   /* ===============================
-     AUTO SCROLL TO ACTIVE WORD
+     AUTO SCROLL TEXT AREA
   ================================= */
   useEffect(() => {
     if (!isReady) return;
@@ -88,6 +103,26 @@ function PDFViewer({ setPdfText, words, setWords, activeWord }) {
     });
   }, [activeWord, isReady, words.length]);
 
+  /* ===============================
+     AUTO SWITCH PDF PAGE
+  ================================= */
+  useEffect(() => {
+    if (!isReady) return;
+    if (!pageBoundaries.length) return;
+
+    const pageIndex = pageBoundaries.findIndex(
+      (boundary) => activeWord < boundary
+    );
+
+    if (pageIndex !== -1) {
+      const newPage = pageIndex + 1;
+
+      if (newPage !== currentPage) {
+        setCurrentPage(newPage);
+      }
+    }
+  }, [activeWord, pageBoundaries, isReady, currentPage]);
+
   return (
     <div className="pdf-container">
       <h2>📄 AI PDF Reader</h2>
@@ -100,7 +135,12 @@ function PDFViewer({ setPdfText, words, setWords, activeWord }) {
 
       <div className="pdf-inner">
         {pdfUrl ? (
-          <iframe src={pdfUrl} title="Preview" className="pdf-frame" />
+          <iframe
+            key={currentPage}
+            src={`${pdfUrl}#page=${currentPage}`}
+            title="Preview"
+            className="pdf-frame"
+          />
         ) : (
           <div className="pdf-placeholder">
             Upload a document to preview
