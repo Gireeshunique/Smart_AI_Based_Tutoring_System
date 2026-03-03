@@ -6,12 +6,24 @@ import math
 import re
 from werkzeug.utils import secure_filename
 from google.cloud import texttospeech
-
+import google  as genai
 from file_converter import docx_to_pdf, pptx_to_pdf
 from speech import speech_to_text
 from ai_engine import explain_pdf
 from database import save_pdf, get_all_content
 from pdf_utils import extract_text_by_page
+
+# responsive answer
+import requests
+import os
+
+HF_TOKEN = ""
+
+API_URL = "https://api-inference.huggingface.co/models/google/flan-t5-large"
+
+headers = {
+    "Authorization": f"Bearer {HF_TOKEN}"
+}
 
 # ------------------------------------------------
 # APP SETUP
@@ -200,6 +212,63 @@ def ask_voice():
         "answer": "Voice Q&A pipeline unchanged"
     })
 
+@app.route("/ask", methods=["POST"])
+def ask():
+    try:
+        data = request.json
+        question = data.get("question", "").strip()
 
+        if not question:
+            return jsonify({"error": "Question is required"}), 400
+
+        docs = get_all_content()
+        if not docs:
+            return jsonify({"error": "No uploaded document found"}), 400
+
+        context = docs[0]["content"]
+
+        # 🔥 IMPORTANT: Limit context size (avoid token overflow)
+        context = context[:3000]
+
+        prompt = f"""
+Answer the question using ONLY the information from the document below.
+
+If the answer is not found in the document, reply exactly:
+The answer is not available in the uploaded document.
+
+Document:
+{context}
+
+Question:
+{question}
+
+Answer:
+"""
+
+        payload = {
+            "inputs": prompt,
+            "parameters": {
+                "max_new_tokens": 300,
+                "temperature": 0.2
+            }
+        }
+
+        response = requests.post(API_URL, headers=headers, json=payload)
+        result = response.json()
+
+        if isinstance(result, list) and "generated_text" in result[0]:
+            generated_text = result[0]["generated_text"]
+
+            # Remove prompt from output if repeated
+            answer = generated_text.replace(prompt, "").strip()
+        else:
+            answer = "No response generated."
+
+        return jsonify({"answer": answer})
+
+    except Exception as e:
+        print("Error in /ask:", e)
+        return jsonify({"error": "AI processing failed"}), 500
+    
 if __name__ == "__main__":
     app.run(debug=True, port=5000, use_reloader=False)

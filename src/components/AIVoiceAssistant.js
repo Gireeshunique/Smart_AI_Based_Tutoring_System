@@ -15,7 +15,7 @@ const getWordArray = (text) => {
     .split(/\s+/);
 };
 
-function AIVoiceAssistant({ pdfText, setActiveWord }) {
+function AIVoiceAssistant({ pdfText, setActiveWord, onComplete }) {
   const [voiceType, setVoiceType] = useState("female");
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
@@ -79,6 +79,9 @@ const speakFromIndex = async (startIndex) => {
       setIsPaused(false);
       setActiveWord(-1);
       currentWordIndexRef.current = 0;
+      if (onComplete){
+        onComplete();
+      }
     };
 
     speechSynthesis.speak(utterance);
