@@ -2,12 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import axios from "axios";
 import "./PDFViewer.css";
 
-/* ===============================
-   TEXT CLEANER
-================================ */
 const cleanExtractedText = (text) => {
   if (!text || typeof text !== "string") return "";
-
   return text
     .replace(/\f/g, " ")
     .replace(/-\s*\n\s*/g, "")
@@ -18,12 +14,8 @@ const cleanExtractedText = (text) => {
     .trim();
 };
 
-/* ===============================
-   SHARED WORD EXTRACTOR
-================================ */
 const getWordArray = (text) => {
   if (!text || typeof text !== "string") return [];
-
   return text
     .toLowerCase()
     .replace(/[^\w\s]/g, "")
@@ -35,16 +27,17 @@ function PDFViewer({ setPdfText, words, setWords, activeWord }) {
   const [pdfUrl, setPdfUrl] = useState(null);
   const [isReady, setIsReady] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageBoundaries, setPageBoundaries] = useState([]);  // ✅ fixed
+  const [totalPages, setTotalPages] = useState(0);
+  const [pageBoundaries, setPageBoundaries] = useState([]);
+  const [fileName, setFileName] = useState("");
   const wordRefs = useRef([]);
+  const fileInputRef = useRef(null);
 
-  /* ===============================
-     UPLOAD PDF
-  ================================= */
   const uploadPDF = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
 
+    setFileName(file.name);
     setIsReady(false);
     setWords([]);
     setPdfText("");
@@ -62,8 +55,8 @@ function PDFViewer({ setPdfText, words, setWords, activeWord }) {
       );
 
       setPdfUrl(res.data.pdf_url);
+      setTotalPages(res.data.pages.length);
 
-      // 🔥 Calculate page boundaries
       const pageWordCounts = res.data.pages.map((p) =>
         getWordArray(cleanExtractedText(p.text)).length
       );
@@ -87,39 +80,19 @@ function PDFViewer({ setPdfText, words, setWords, activeWord }) {
     }
   };
 
-  /* ===============================
-     AUTO SCROLL TEXT AREA
-  ================================= */
   useEffect(() => {
-    if (!isReady) return;
-    if (activeWord < 0 || activeWord >= words.length) return;
-
+    if (!isReady || activeWord < 0 || activeWord >= words.length) return;
     const el = wordRefs.current[activeWord];
     if (!el) return;
-
-    el.scrollIntoView({
-      behavior: "smooth",
-      block: "center",
-    });
+    el.scrollIntoView({ behavior: "smooth", block: "center" });
   }, [activeWord, isReady, words.length]);
 
-  /* ===============================
-     AUTO SWITCH PDF PAGE
-  ================================= */
   useEffect(() => {
-    if (!isReady) return;
-    if (!pageBoundaries.length) return;
-
-    const pageIndex = pageBoundaries.findIndex(
-      (boundary) => activeWord < boundary
-    );
-
+    if (!isReady || !pageBoundaries.length) return;
+    const pageIndex = pageBoundaries.findIndex((boundary) => activeWord < boundary);
     if (pageIndex !== -1) {
       const newPage = pageIndex + 1;
-
-      if (newPage !== currentPage) {
-        setCurrentPage(newPage);
-      }
+      if (newPage !== currentPage) setCurrentPage(newPage);
     }
   }, [activeWord, pageBoundaries, isReady, currentPage]);
 
@@ -127,11 +100,22 @@ function PDFViewer({ setPdfText, words, setWords, activeWord }) {
     <div className="pdf-container">
       <h2>📄 AI PDF Reader</h2>
 
-      <input
-        type="file"
-        accept=".pdf,.docx,.ppt,.pptx"
-        onChange={uploadPDF}
-      />
+      <div className="file-upload-wrapper">
+        <label className="file-upload-label" onClick={() => fileInputRef.current?.click()}>
+          📂 Choose File
+        </label>
+        <input
+          type="file"
+          accept=".pdf,.docx,.ppt,.pptx"
+          onChange={uploadPDF}
+          ref={fileInputRef}
+        />
+        {fileName && (
+          <span className="file-name-badge" title={fileName}>
+            📎 {fileName}
+          </span>
+        )}
+      </div>
 
       <div className="pdf-inner">
         {pdfUrl ? (
@@ -143,10 +127,17 @@ function PDFViewer({ setPdfText, words, setWords, activeWord }) {
           />
         ) : (
           <div className="pdf-placeholder">
-            Upload a document to preview
+            <div className="placeholder-icon">📑</div>
+            <p>Upload a document to preview</p>
           </div>
         )}
       </div>
+
+      {isReady && totalPages > 0 && (
+        <div className="page-badge">
+          📖 Page {currentPage} / {totalPages}
+        </div>
+      )}
 
       {isReady && (
         <div className="pdf-text-outside">

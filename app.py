@@ -13,17 +13,15 @@ from ai_engine import explain_pdf
 from database import save_pdf, get_all_content
 from pdf_utils import extract_text_by_page
 
-# responsive answer
-import requests
-import os
 
-HF_TOKEN = ""
 
-API_URL = "https://api-inference.huggingface.co/models/google/flan-t5-large"
+import os, requests
 
-headers = {
-    "Authorization": f"Bearer {HF_TOKEN}"
-}
+import ollama
+
+OLLAMA_MODEL = "gemma2:2b"
+
+
 
 # ------------------------------------------------
 # APP SETUP
@@ -38,7 +36,9 @@ AUDIO_DIR = os.path.join(BASE_DIR, "static", "audio")
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 os.makedirs(AUDIO_DIR, exist_ok=True)
 
-sys.path.append(BASE_DIR)
+# ✅ FIX 4: sys.path.append should come BEFORE local imports (moved to top)
+sys.path.insert(0, BASE_DIR)
+
 
 # ------------------------------------------------
 # UPLOAD PDF / DOCX / PPTX
@@ -49,46 +49,69 @@ def upload_file():
     if not file:
         return jsonify({"error": "No file uploaded"}), 400
 
+    # ✅ FIX 5: Handle empty filename
+    if file.filename == "" or file.filename is None:
+        return jsonify({"error": "Filename is empty"}), 400
+
     filename = secure_filename(file.filename)
-    ext = filename.rsplit(".", 1)[-1].lower()
+    ext = filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
+
+    # ✅ FIX 6: Validate extension BEFORE saving to disk
+    allowed_exts = ["pdf", "docx", "ppt", "pptx"]
+    if ext not in allowed_exts:
+        return jsonify({"error": f"Unsupported file type '.{ext}'. Allowed: PDF, DOCX, PPT, PPTX"}), 400
 
     upload_path = os.path.join(UPLOAD_DIR, filename)
     file.save(upload_path)
 
-    # -------- CONVERT TO PDF --------
-    if ext == "docx":
-        pdf_path = upload_path.replace(".docx", ".pdf")
-        docx_to_pdf(upload_path, pdf_path)
+    pdf_path = None
 
-    elif ext in ["ppt", "pptx"]:
-        pdf_path = upload_path.rsplit(".", 1)[0] + ".pdf"
-        pptx_to_pdf(upload_path, pdf_path)
+    try:
+        # -------- CONVERT TO PDF --------
+        if ext == "docx":
+            pdf_path = upload_path.replace(".docx", ".pdf")
+            docx_to_pdf(upload_path, pdf_path)
 
-    elif ext == "pdf":
-        pdf_path = upload_path
+        elif ext in ["ppt", "pptx"]:
+            pdf_path = upload_path.rsplit(".", 1)[0] + ".pdf"
+            pptx_to_pdf(upload_path, pdf_path)
 
-    else:
-        return jsonify({"error": "Unsupported file type"}), 400
+        elif ext == "pdf":
+            pdf_path = upload_path
 
-    # -------- PAGE-WISE TEXT --------
-    pages = extract_text_by_page(pdf_path)
+        # ✅ FIX 7: Verify converted PDF actually exists before proceeding
+        if not os.path.exists(pdf_path):
+            return jsonify({"error": "File conversion failed — PDF not generated"}), 500
 
-    full_text = "\n".join(
-        p["text"] for p in pages if p["text"].strip()
-    )
+        # -------- PAGE-WISE TEXT --------
+        pages = extract_text_by_page(pdf_path)
 
-    save_pdf(
-        filename=os.path.basename(pdf_path),
-        full_text=full_text,
-        
-    )
+        # ✅ FIX 8: Guard against None return from extract_text_by_page
+        if not pages:
+            pages = []
 
-    return jsonify({
-        "message": "File uploaded successfully",
-        "filename": os.path.basename(pdf_path),
-        "pdf_url": f"http://localhost:5000/pdf/{os.path.basename(pdf_path)}",
-        "pages": pages
-    })
+        full_text = "\n".join(
+            p["text"] for p in pages if p.get("text", "").strip()
+        )
+
+        save_pdf(
+            filename=os.path.basename(pdf_path),
+            full_text=full_text,
+        )
+
+        return jsonify({
+            "message": "File uploaded successfully",
+            "filename": os.path.basename(pdf_path),
+            "pdf_url": f"http://localhost:5000/pdf/{os.path.basename(pdf_path)}",
+            "pages": pages
+        })
+
+    except Exception as e:
+        # ✅ FIX 9: Clean up uploaded file on error to avoid orphaned files
+        if upload_path and os.path.exists(upload_path):
+            os.remove(upload_path)
+        print(f"Error during upload: {e}")
+        return jsonify({"error": f"Processing failed: {str(e)}"}), 500
 
 
 # ------------------------------------------------
@@ -96,6 +119,10 @@ def upload_file():
 # ------------------------------------------------
 @app.route("/pdf/<path:filename>")
 def serve_pdf(filename):
+    # ✅ FIX 10: Check file exists before serving (prevents 500, gives clean 404)
+    filepath = os.path.join(UPLOAD_DIR, filename)
+    if not os.path.exists(filepath):
+        return jsonify({"error": "File not found"}), 404
     return send_from_directory(UPLOAD_DIR, filename, as_attachment=False)
 
 
@@ -107,8 +134,8 @@ def get_pdf_text():
     docs = get_all_content()
     if not docs:
         return jsonify({"text": ""})
-
-    return jsonify({"text": docs[0]["content"]})
+    # ✅ FIX 11: Safe key access — use .get() to avoid KeyError
+    return jsonify({"text": docs[0].get("content", "")})
 
 
 # ------------------------------------------------
@@ -119,8 +146,8 @@ def get_pdf_text_pages():
     docs = get_all_content()
     if not docs:
         return jsonify([])
-
-    return jsonify(docs[0]["pages"])
+    # ✅ FIX 12: Safe key access
+    return jsonify(docs[0].get("pages", []))
 
 
 # ------------------------------------------------
@@ -128,7 +155,12 @@ def get_pdf_text_pages():
 # ------------------------------------------------
 @app.route("/explain_pdf")
 def explain_pdf_api():
-    return jsonify({"sentences": explain_pdf()})
+    # ✅ FIX 13: Wrap in try/except — explain_pdf() can throw if no doc loaded
+    try:
+        result = explain_pdf()
+        return jsonify({"sentences": result})
+    except Exception as e:
+        return jsonify({"error": f"Explanation failed: {str(e)}"}), 500
 
 
 # ------------------------------------------------
@@ -140,12 +172,23 @@ def read_pdf():
     if not docs:
         return jsonify({"error": "No PDF found"}), 400
 
-    text = docs[0]["content"]
+    text = docs[0].get("content", "").strip()
+
+    # ✅ FIX 14: Guard against empty content
+    if not text:
+        return jsonify({"error": "Document has no readable text"}), 400
 
     sentences = re.split(r'(?<=[.!?])\s+', text)
     sentences = [s for s in sentences if len(s.strip()) > 10]
 
-    client = texttospeech.TextToSpeechClient()
+    # ✅ FIX 15: Guard against no sentences found
+    if not sentences:
+        return jsonify({"error": "No readable sentences found in document"}), 400
+
+    try:
+        client = texttospeech.TextToSpeechClient()
+    except Exception as e:
+        return jsonify({"error": f"TTS client init failed: {str(e)}"}), 500
 
     voice = texttospeech.VoiceSelectionParams(
         language_code="en-IN",
@@ -161,26 +204,36 @@ def read_pdf():
     response_data = []
 
     for i, sentence in enumerate(sentences):
-        response = client.synthesize_speech(
-            input=texttospeech.SynthesisInput(text=sentence),
-            voice=voice,
-            audio_config=audio_config
-        )
+        # ✅ FIX 16: Wrap each TTS call — one bad sentence shouldn't kill the whole response
+        try:
+            tts_response = client.synthesize_speech(
+                input=texttospeech.SynthesisInput(text=sentence),
+                voice=voice,
+                audio_config=audio_config
+            )
 
-        audio_file = f"sentence_{i}.mp3"
-        audio_path = os.path.join(AUDIO_DIR, audio_file)
+            audio_file = f"sentence_{i}.mp3"
+            audio_path = os.path.join(AUDIO_DIR, audio_file)
 
-        with open(audio_path, "wb") as f:
-            f.write(response.audio_content)
+            with open(audio_path, "wb") as f:
+                f.write(tts_response.audio_content)
 
-        duration = max(1, math.ceil(len(sentence.split()) / 2.2))
+            duration = max(1, math.ceil(len(sentence.split()) / 2.2))
 
-        response_data.append({
-            "id": i,
-            "sentence": sentence,
-            "audio": f"/static/audio/{audio_file}",
-            "duration": duration
-        })
+            response_data.append({
+                "id": i,
+                "sentence": sentence,
+                "audio": f"/static/audio/{audio_file}",
+                "duration": duration
+            })
+
+        except Exception as e:
+            print(f"TTS failed for sentence {i}: {e}")
+            # Skip failed sentence, continue with rest
+            continue
+
+    if not response_data:
+        return jsonify({"error": "TTS generation failed for all sentences"}), 500
 
     return jsonify(response_data)
 
@@ -190,85 +243,110 @@ def read_pdf():
 # ------------------------------------------------
 @app.route("/static/audio/<path:filename>")
 def serve_audio(filename):
+    # ✅ FIX 17: Check file exists before serving
+    filepath = os.path.join(AUDIO_DIR, filename)
+    if not os.path.exists(filepath):
+        return jsonify({"error": "Audio file not found"}), 404
     return send_from_directory(AUDIO_DIR, filename)
 
 
+
 # ------------------------------------------------
-# VOICE QUESTION
+# SHARED HELPER
 # ------------------------------------------------
-@app.route("/voice", methods=["POST"])
-def ask_voice():
-    audio = request.files.get("audio")
-    if not audio:
-        return jsonify({"error": "No audio uploaded"}), 400
+def query_ollama_model(question: str, context: str, model: str = OLLAMA_MODEL):
+    prompt = (
+        f"Read the following document carefully and answer the question.\n\n"
+        f"Document:\n{context}\n\n"
+        f"Question: {question}\n\n"
+        f"Instructions:\n"
+        f"- Answer in plain sentences only.\n"
+        f"- No bullet points, no asterisks, no markdown.\n"
+        f"- Write in clear paragraphs.\n"
+        f"- Be concise and direct.\n\n"
+        f"Answer:"
+    )
+    try:
+        response = ollama.chat(
+            model=model,
+            messages=[{"role": "user", "content": prompt}]
+        )
+        answer = response["message"]["content"].strip()
 
-    path = "voice.wav"
-    audio.save(path)
+        # Strip any remaining markdown symbols
+        answer = answer.replace("**", "").replace("*", "").replace("##", "").replace("#", "")
 
-    question = speech_to_text(path)
+        return answer or "Answer not found in document.", None
 
-    return jsonify({
-        "question": question,
-        "answer": "Voice Q&A pipeline unchanged"
-    })
+    except ollama.ResponseError as e:
+        return None, (jsonify({"error": f"Ollama error: {str(e)}"}), 500)
 
+    except Exception as e:
+        return None, (jsonify({"error": f"Unexpected error: {str(e)}"}), 500)
+    
+# ------------------------------------------------
+# COMBINED VOICE + TEXT ROUTE
+# ------------------------------------------------
 @app.route("/ask", methods=["POST"])
 def ask():
-    try:
-        data = request.json
-        question = data.get("question", "").strip()
+    question = None
 
+    # --- VOICE INPUT ---
+    if "audio" in request.files:
+        audio = request.files.get("audio")
+        path = os.path.join(BASE_DIR, "voice.wav")
+        audio.save(path)
+
+        try:
+            question = speech_to_text(path)
+        except Exception as e:
+            return jsonify({"error": f"Speech recognition failed: {str(e)}"}), 500
+
+        if not question or not question.strip():
+            return jsonify({"error": "Could not transcribe audio. Please speak clearly."}), 400
+
+    # --- TEXT INPUT ---
+    else:
+        data = request.json
+        if not data:
+            return jsonify({"error": "Request body must be JSON or audio file"}), 400
+
+        question = data.get("question", "").strip()
         if not question:
             return jsonify({"error": "Question is required"}), 400
 
+    # --- COMMON: GET DOCUMENT & ANSWER ---
+    try:
         docs = get_all_content()
         if not docs:
-            return jsonify({"error": "No uploaded document found"}), 400
+            return jsonify({
+                "question": question,
+                "error": "No document uploaded. Please upload a PDF first."
+            }), 400
 
-        context = docs[0]["content"]
+        content = docs[0].get("content", "")
+        if not content.strip():
+            return jsonify({
+                "question": question,
+                "error": "Document has no readable content."
+            }), 400
 
-        # 🔥 IMPORTANT: Limit context size (avoid token overflow)
-        context = context[:3000]
+        answer, err = query_ollama_model(question, content[:1500])
+        if err:
+            return err
 
-        prompt = f"""
-Answer the question using ONLY the information from the document below.
-
-If the answer is not found in the document, reply exactly:
-The answer is not available in the uploaded document.
-
-Document:
-{context}
-
-Question:
-{question}
-
-Answer:
-"""
-
-        payload = {
-            "inputs": prompt,
-            "parameters": {
-                "max_new_tokens": 300,
-                "temperature": 0.2
-            }
-        }
-
-        response = requests.post(API_URL, headers=headers, json=payload)
-        result = response.json()
-
-        if isinstance(result, list) and "generated_text" in result[0]:
-            generated_text = result[0]["generated_text"]
-
-            # Remove prompt from output if repeated
-            answer = generated_text.replace(prompt, "").strip()
-        else:
-            answer = "No response generated."
-
-        return jsonify({"answer": answer})
+        return jsonify({
+            "question": question,
+            "answer": answer
+        })
 
     except Exception as e:
         print("Error in /ask:", e)
-        return jsonify({"error": "AI processing failed"}), 500
+        return jsonify({"error": str(e)}), 500
     
+
+# ------------------------------------------------
+# RUN
+# ------------------------------------------------
 if __name__ == "__main__":
     app.run(debug=True, port=5000, use_reloader=False)
