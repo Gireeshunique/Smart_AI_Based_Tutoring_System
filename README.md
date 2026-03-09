@@ -1,214 +1,254 @@
-# College_project
+# 🎓 AI PDF Voice Reader & Virtual Teacher
 
-## 📘 AI PDF Voice Reader & Virtual Teacher
+> An intelligent web application that reads your documents aloud — upload a PDF, DOCX, or PPTX and let the AI teach you.
 
-An AI-powered web application that allows users to upload PDF / DOCX / PPT files, view them in the browser, and have an AI voice assistant read the document aloud with controls like Start, Pause, Resume, and Stop.
+![Python](https://img.shields.io/badge/Python-3.10+-blue?style=flat-square&logo=python)
+![React](https://img.shields.io/badge/React-18+-61DAFB?style=flat-square&logo=react)
+![Flask](https://img.shields.io/badge/Flask-2.x-black?style=flat-square&logo=flask)
+![MySQL](https://img.shields.io/badge/MySQL-8.0-orange?style=flat-square&logo=mysql)
+![License](https://img.shields.io/badge/License-Educational-green?style=flat-square)
 
-This project is designed to act as a virtual teacher, helping students learn by listening to documents while viewing them simultaneously.
+---
 
-### 🚀 Features
+## 📌 Overview
 
-📄 Upload PDF / DOCX / PPTX files
+**AI PDF Voice Reader** is a full-stack web application designed to act as a **virtual teacher**. Users can upload documents, view them in the browser, and have an AI voice assistant read the content aloud — page by page — with full playback controls.
 
-🔄 Automatic conversion to PDF (DOCX / PPTX)
+Built for students, visually impaired users, and self-learners who benefit from audio-assisted reading.
 
-👀 View PDF directly in the browser
+---
 
-🧠 Extract text from PDF page-wise
+## ✨ Features
 
-🔊 AI reads the document using browser Speech Synthesis
+| Feature | Description |
+|---|---|
+| 📄 **Multi-format Upload** | Supports PDF, DOCX, and PPTX files |
+| 🔄 **Auto Conversion** | DOCX and PPTX are automatically converted to PDF |
+| 👀 **In-browser Viewer** | View the document while it's being read |
+| 🧠 **Page-wise Text Extraction** | Text extracted per page for accurate sync |
+| 🔊 **AI Voice Reading** | Document read aloud using Web Speech Synthesis |
+| ⏯ **Full Playback Controls** | Start, Pause, Resume, and Stop |
+| 🎙 **Voice Selection** | Choose between Male and Female voices |
+| 📖 **Auto Page Scrolling** | PDF auto-advances when a page is fully read |
+| 🗄 **Database Storage** | Extracted text stored in MySQL |
 
-⏯ Start / Pause / Resume / Stop voice reading
+---
 
-🎙 Male / Female voice selection
+## 🏗️ Architecture
 
-⚡ Fast backend with Flask
+```
+┌─────────────────────────────────────────────┐
+│                 Frontend (React)             │
+│                                             │
+│  ┌─────────────┐      ┌──────────────────┐  │
+│  │  PDFViewer  │      │ AIVoiceAssistant │  │
+│  │  • Upload   │      │  • Speech Synth  │  │
+│  │  • Render   │      │  • Controls      │  │
+│  │  • Extract  │      │  • Voice Select  │  │
+│  └──────┬──────┘      └────────┬─────────┘  │
+│         └──────────┬───────────┘            │
+│               App.jsx                       │
+│           (Shared pdfText state)            │
+└───────────────────┬─────────────────────────┘
+                    │ HTTP (Axios)
+┌───────────────────▼─────────────────────────┐
+│                Backend (Flask)               │
+│                                             │
+│  • Upload API       • PDF Text Extractor    │
+│  • File Converter   • MySQL Storage         │
+│  • Static File Server                       │
+└─────────────────────────────────────────────┘
+```
 
-🌐 React-based frontend
+---
 
-🗄 MySQL database for storing document text
+## 🧑‍💻 Tech Stack
 
-🏗️ System Architecture
-#### 🔹 Frontend (React)
-###### Frontend (React)
+### Frontend
+- **React 18** — UI framework
+- **Axios** — HTTP requests
+- **Web Speech API** — Browser-native voice synthesis
+- **CSS3** — Styling
+
+### Backend
+- **Python / Flask** — REST API server
+- **pdfplumber** — PDF text extraction
+- **docx2pdf** — DOCX to PDF conversion
+- **python-pptx** — PPTX to PDF conversion
+- **Flask-CORS** — Cross-origin support
+- **mysql-connector-python** — Database layer
+
+### Database
+- **MySQL 8.0** — Stores document names and extracted text
+
+---
+
+## 📂 Project Structure
+
+```
+ai-pdf-reader/
 │
-├── PDFViewer
- │   ├── Upload file
- │   ├── Render PDF
- │   └── Extract text → App state
- │
- ├── AIVoiceAssistant
- │   └── Reads PDF text using AI voice
- │
- └── App.jsx (Shared State)
-     └── pdfText
-
-##### 🔹 Backend (Flask)
-##### Backend (Flask)
- │
- ├── Upload API
- ├── File Converter (DOCX / PPTX → PDF)
- ├── PDF Text Extractor
- ├── Database Layer (MySQL)
- └── AI Engine
-
-
-
-### 🧑‍💻 Tech Stack
-##### Frontend
-
-React
-
-PDF.js
-
-Web Speech API (SpeechSynthesis)
-
-CSS
-
-###### Backend
-
-Python (Flask)
-
-Flask-CORS
-
-pdfplumber
-
-docx2pdf
-
-python-pptx
-
-MySQL Connector
-
-##### Database
-
-MySQL
-
-### 📂 Project Structure
-Frontend (React)
+├── backend/
+│   ├── app.py                  # Flask application entry point
+│   ├── requirements.txt        # Python dependencies
+│   └── uploads/                # Uploaded & converted files (auto-created)
 │
-├── PDFViewer
-│   ├── Upload file
-│   ├── Render PDF
-│   └── Extract text → App state
+├── frontend/
+│   ├── public/
+│   ├── src/
+│   │   ├── App.jsx             # Root component & shared state
+│   │   ├── PDFViewer.jsx       # Upload, render, and extract PDF text
+│   │   ├── PDFViewer.css
+│   │   ├── AIVoiceAssistant.jsx # Voice reading & playback controls
+│   │   └── AIVoiceAssistant.css
+│   └── package.json
 │
-├── AIVoiceAssistant
-│   └── Reads PDF text using AI voice
-│
-└── App.jsx (Shared State)
-    └── pdfText
-        ↓
-Backend (Flask)
-│
-├── Upload API
-├── File Converter (DOCX / PPTX → PDF)
-├── PDF Text Extractor
-├── Database Layer (MySQL)
-└── AI Engine
+└── README.md
+```
 
+---
 
-### 🛠 Setup Instructions
-##### 1️⃣ Backend Setup
-cd backend
-python -m venv venv
-venv\Scripts\activate   # Windows
-pip install -r requirements.txt
+## 🛠️ Setup Instructions
 
+### Prerequisites
 
-##### Create MySQL database:
+- Node.js 18+
+- Python 3.10+
+- MySQL 8.0+
 
+---
+
+### 1️⃣ Database Setup
+
+Open your MySQL client and run:
+
+```sql
 CREATE DATABASE ai_teacher;
 
+USE ai_teacher;
+
 CREATE TABLE pdf_knowledge (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  pdf_name VARCHAR(255),
-  content LONGTEXT
+  id        INT AUTO_INCREMENT PRIMARY KEY,
+  pdf_name  VARCHAR(255),
+  content   LONGTEXT
 );
+```
 
+---
 
-Run backend:
+### 2️⃣ Backend Setup
 
+```bash
+# Navigate to backend directory
+cd backend
+
+# Create and activate virtual environment
+python -m venv venv
+
+# Windows
+venv\Scripts\activate
+
+# macOS / Linux
+source venv/bin/activate
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Start the Flask server
 python app.py
+```
 
+> Backend runs at **http://127.0.0.1:5000**
 
-Backend runs at:
+---
 
-http://127.0.0.1:5000
+### 3️⃣ Frontend Setup
 
-##### 2️⃣ Frontend Setup
+```bash
+# Navigate to frontend directory
 cd frontend
+
+# Install dependencies
 npm install
+
+# Start the React app
 npm start
+```
 
+> Frontend runs at **http://localhost:3000**
 
-Frontend runs at:
+---
 
-http://localhost:3000
+## 🔌 API Endpoints
 
-#### 🔌 API Endpoints
-Method	Endpoint	Description
-POST	/upload	Upload PDF / DOCX / PPT
-GET	/pdf/<filename>	Serve PDF file
-GET	/pdf_text_pages	Get extracted text
-GET	/explain_pdf	AI summary (optional)
-##### 🎯 How It Works
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `POST` | `/upload` | Upload a PDF / DOCX / PPTX file |
+| `GET` | `/pdf/<filename>` | Serve the converted PDF file |
+| `GET` | `/pdf_text_pages` | Get page-wise extracted text |
+| `GET` | `/explain_pdf` | AI summary of document *(optional)* |
 
-User uploads a document
+---
 
-Backend converts it to PDF if required
+## 🎯 How It Works
 
-PDF is rendered on frontend
+```
+1. User uploads a document (PDF / DOCX / PPTX)
+        ↓
+2. Backend converts it to PDF (if needed)
+        ↓
+3. PDF is rendered in the browser via iframe
+        ↓
+4. Text is extracted page-by-page and stored in MySQL
+        ↓
+5. Extracted text is sent to the React frontend
+        ↓
+6. AI Voice Assistant reads the text aloud
+        ↓
+7. PDF auto-scrolls to the next page when current page is fully read
+```
 
-Text is extracted and stored
+---
 
-Text is passed to AI Voice Assistant
+## ✅ Current Capabilities
 
-AI reads the document aloud
+- ✔ Full document reading with AI voice
+- ✔ Smooth Pause and Resume support
+- ✔ Auto page advance when reading completes a page
+- ✔ Male / Female voice selection
+- ✔ Clean, distraction-free UI
+- ✔ Stable Flask backend with MySQL persistence
 
-User controls reading using buttons
+---
 
-#### ✅ Current Capabilities
+## 🔮 Roadmap
 
-✔ AI reads full PDF content
+- [ ] Word-level highlighting inside the PDF
+- [ ] Question & Answer from document content
+- [ ] Google Neural TTS integration
+- [ ] Multi-language support
+- [ ] Mobile-responsive UI
+- [ ] User authentication and document history
 
-✔ Smooth pause and resume
+---
 
-✔ No unnecessary popups
+## 👥 Use Cases
 
-✔ Clean UI and UX
+- 🎓 **Students** — Listen to study material while viewing notes
+- 👁 **Visually impaired users** — Full audio-assisted document reading
+- 🏫 **Online education platforms** — AI-powered lecture delivery
+- 📚 **Self-learners** — Hands-free reading of books and articles
+- 🤖 **AI teaching tools** — Automated virtual classroom assistant
 
-✔ Stable backend
+---
 
-### 🔮 Future Enhancements
+## 👨‍🎓 Author
 
-🟨 Word highlighting inside PDF
+**Gireesh Boggala**
+AI Virtual Teacher Project — College Final Year Project
 
-📄 Page-by-page auto reading
+---
 
-🧠 Question answering from PDF
+## 🧾 License
 
-🎧 Google Neural TTS
-
-🌍 Multi-language support
-
-📱 Mobile-friendly UI
-
-### 👨‍🎓 Use Cases
-
-Students and self-learners
-
-Visually impaired users
-
-Online education platforms
-
-Digital reading assistants
-
-AI-based teaching tools
-
-### 🧾 License
-
-This project is for educational and research purposes.
-
-### 🙌 Author
-
-Gireesh Boggala
-AI Virtual Teacher Project
+This project is developed for **educational and research purposes only**.
