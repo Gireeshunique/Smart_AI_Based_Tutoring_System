@@ -4,7 +4,6 @@
 
 body {
   font-family: "Poppins", sans-serif;
-  /* ✅ Matches screenshot: mint green → soft white → lavender → sky blue */
   background: linear-gradient(135deg,
     #d4f5e9 0%,
     #e8f5f0 15%,
@@ -30,7 +29,6 @@ body {
   min-height: 100vh;
 }
 
-/* ── LEFT PANEL ── */
 .pdf-container {
   flex: 8;
   padding: 28px 32px;
@@ -44,12 +42,10 @@ body {
   to   { opacity: 1; transform: translateY(0);    }
 }
 
-/* TITLE */
 .pdf-container h2 {
   font-size: 24px;
   font-weight: 800;
   margin-bottom: 20px;
-  /* ✅ Deep navy matching screenshot heading */
   color: #1a1a3e;
   letter-spacing: -0.5px;
   animation: slide-down 0.5s ease both;
@@ -60,7 +56,6 @@ body {
   to   { opacity: 1; transform: translateY(0);     }
 }
 
-/* UPLOAD ROW */
 .file-upload-wrapper {
   display: flex;
   align-items: center;
@@ -73,7 +68,6 @@ body {
 
 .file-upload-label {
   padding: 11px 24px;
-  /* ✅ Matches screenshot purple button gradient */
   background: linear-gradient(135deg, #7c3aed, #6d28d9);
   color: #fff;
   font-family: "Poppins", sans-serif;
@@ -87,7 +81,6 @@ body {
   overflow: hidden;
 }
 
-/* shimmer sweep */
 .file-upload-label::after {
   content: "";
   position: absolute;
@@ -135,13 +128,11 @@ body {
   to   { opacity: 1; transform: scale(1);   }
 }
 
-/* PDF FRAME */
 .pdf-inner {
   width: 100%;
   margin-bottom: 14px;
   border-radius: 20px;
   overflow: hidden;
-  /* ✅ White card with subtle shadow — matches screenshot answer card style */
   box-shadow: 0 8px 32px rgba(109, 40, 217, 0.10), 0 2px 8px rgba(0,0,0,0.04);
   border: 1.5px solid rgba(221, 214, 254, 0.6);
   animation: fade-in 0.7s ease 0.2s both;
@@ -163,7 +154,6 @@ body {
   background: #fff;
 }
 
-/* PLACEHOLDER */
 .pdf-placeholder {
   height: 60vh;
   display: flex;
@@ -185,7 +175,6 @@ body {
 .pdf-placeholder p {
   font-size: 15px;
   font-weight: 500;
-  /* ✅ Softer mint-purple tone for empty state */
   color: #6d9eeb;
   animation: pulse-text 2.5s ease-in-out infinite;
 }
@@ -201,14 +190,12 @@ body {
   50%       { opacity: 1;   }
 }
 
-/* PAGE BADGE */
 .page-badge {
   display: inline-flex;
   align-items: center;
   gap: 6px;
   margin-bottom: 12px;
   padding: 5px 16px;
-  /* ✅ Mint-tinted badge matching screenshot's pill buttons */
   background: rgba(255,255,255,0.8);
   border: 1.5px solid #c4b5fd;
   border-radius: 999px;
@@ -224,26 +211,23 @@ body {
   background: rgba(221, 214, 254, 0.6);
 }
 
-/* TEXT AREA */
+/* ── SCROLL BOX ──
+   NO backdrop-filter here — it creates a GPU compositing layer
+   in Chrome that blocks className changes from repainting.      */
 .pdf-text-outside {
   height: 26vh;
   padding: 18px 22px;
   overflow-y: auto;
-  /* ✅ White glass card — matches screenshot answer box */
-  background: rgba(255, 255, 255, 0.88);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  background: rgba(255, 255, 255, 0.95);
   border-radius: 16px;
   border: 1.5px solid rgba(221, 214, 254, 0.7);
   font-size: 13.5px;
-  line-height: 2;
+  line-height: 2.2;
   color: #374151;
-  scroll-behavior: smooth;
   box-shadow: 0 4px 24px rgba(109, 40, 217, 0.07), 0 1px 4px rgba(0,0,0,0.03);
   animation: fade-in 0.8s ease 0.3s both;
   transition: border-color 0.3s, box-shadow 0.3s;
-  position: relative;       /* ✅ Chrome scrollIntoView fix */
-  isolation: isolate;        /* ✅ Chrome stacking context fix */
+  position: relative;
 }
 
 .pdf-text-outside:focus-within {
@@ -257,51 +241,44 @@ body {
   border-radius: 10px;
 }
 .pdf-text-outside::-webkit-scrollbar-thumb {
-  /* ✅ Matches screenshot purple accent */
   background: linear-gradient(180deg, #7c3aed, #a78bfa);
   border-radius: 10px;
 }
 
-/* ✅ FIX: inline-block on ALL spans so Chrome never switches display type */
-.pdf-text-outside span {
-  padding: 1px 3px;
+/* ── WORD SPANS ──
+   word-inactive : plain inline span
+   word-active   : inline-block forces Chrome to repaint on
+                   className change (inline spans in composited
+                   containers are skipped by Chrome's paint engine) */
+.pdf-text-outside .word-inactive {
+  display: inline;
+  padding: 1px 2px;
   border-radius: 4px;
   color: #6b7280;
+  font-weight: 400;
+}
+
+.pdf-text-outside .word-active {
   display: inline-block;
-  will-change: background-color;
-  -webkit-transform: translateZ(0);
-  transform: translateZ(0);
-}
-
-/* ✅ FIX: Dual selector — class + data-active for Chrome reliability */
-.pdf-text-outside .word-highlight,
-.pdf-text-outside span[data-active="true"] {
-  /* ✅ Matches screenshot purple Ask button gradient */
-  background: linear-gradient(90deg, #7c3aed, #9333ea) !important;
-  color: #fff !important;
-  font-weight: 700;
-  padding: 2px 8px;
+  vertical-align: middle;
+  padding: 1px 7px;
   border-radius: 6px;
-  box-shadow: 0 0 14px rgba(124, 58, 237, 0.45);
-  -webkit-transform: translateZ(0);
-  transform: translateZ(0);
+  background-color: #7c3aed;
+  color: #ffffff;
+  font-weight: 700;
+  box-shadow: 0 2px 12px rgba(124, 58, 237, 0.5);
+  transform: scale(1.08);
 }
 
-/* ── TOP ACCENT BAR (matches screenshot gradient bar) ── */
 .pdf-container::before {
   content: "";
   display: block;
   height: 4px;
-  width: 100%;
-  margin-bottom: 0;
-  /* ✅ Exact gradient from screenshot top bar: purple → pink/magenta */
   background: linear-gradient(90deg, #7c3aed, #a855f7, #ec4899, #f43f5e);
   border-radius: 0 0 8px 8px;
   margin: -28px -32px 24px -32px;
-  padding: 0 32px;
 }
 
-/* MOBILE */
 @media (max-width: 768px) {
   .app-layout       { flex-direction: column; }
   .pdf-container    { padding: 16px; }
