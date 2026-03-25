@@ -1,6 +1,6 @@
-# 🎓 AI PDF Voice Reader & Virtual Teacher
+# 🎓 Smart AI-Based Tutoring System Using NLP, Speech Processing, and Learning Analytics
 
-> An intelligent web application that reads your documents aloud — upload a PDF, DOCX, or PPTX and let the AI teach you.
+> An intelligent AI-powered virtual teacher that converts documents into interactive voice-based learning using NLP, Speech Processing, and Learning Analytics.
 
 ![Python](https://img.shields.io/badge/Python-3.10+-blue?style=flat-square&logo=python)
 ![React](https://img.shields.io/badge/React-18+-61DAFB?style=flat-square&logo=react)
@@ -12,33 +12,127 @@
 
 ## 📌 Overview
 
-**AI PDF Voice Reader** is a full-stack web application designed to act as a **virtual teacher**. Users can upload documents, view them in the browser, and have an AI voice assistant read the content aloud — page by page — with full playback controls.
+The **Smart AI-Based Tutoring System** is a full-stack web application designed to act as a **virtual teacher**. It allows users to upload documents and converts them into **audio-assisted learning content**.
 
-Built for students, visually impaired users, and self-learners who benefit from audio-assisted reading.
+This system integrates:
+
+- 🧠 **Natural Language Processing (NLP)** for understanding content  
+- 🔊 **Speech Processing** for voice-based learning  
+- 📊 **Learning Analytics** to track user interactions  
+
+---
+
+## 🎯 Objectives
+
+- Develop an AI-powered tutoring system  
+- Convert documents into audio learning  
+- Improve accessibility for visually impaired users  
+- Provide hands-free learning experience  
+- Analyze user learning behavior  
 
 ---
 
 ## ✨ Features
 
 | Feature | Description |
-|---|---|
-| 📄 **Multi-format Upload** | Supports PDF, DOCX, and PPTX files |
-| 🔄 **Auto Conversion** | DOCX and PPTX are automatically converted to PDF |
-| 👀 **In-browser Viewer** | View the document while it's being read |
-| 🧠 **Page-wise Text Extraction** | Text extracted per page for accurate sync |
-| 🔊 **AI Voice Reading** | Document read aloud using Web Speech Synthesis |
-| ⏯ **Full Playback Controls** | Start, Pause, Resume, and Stop |
-| 🎙 **Voice Selection** | Choose between Male and Female voices |
-| 📖 **Auto Page Scrolling** | PDF auto-advances when a page is fully read |
-| 🗄 **Database Storage** | Extracted text stored in MySQL |
+|--------|------------|
+| 📄 Multi-format Upload | Supports PDF, DOCX, PPTX |
+| 🔄 Auto Conversion | Converts DOCX & PPTX to PDF |
+| 👀 In-browser Viewer | View document while listening |
+| 🧠 Page-wise Extraction | Extract text per page |
+| 🔊 AI Voice Reading | Reads content using speech API |
+| ⏯ Playback Controls | Start, Pause, Resume, Stop |
+| 🎙 Voice Selection | Male / Female voices |
+| 📖 Auto Page Scroll | Moves to next page automatically |
+| 🗄 Database Storage | Stores extracted content |
 
 ---
 
-## 🏗️ Architecture
+## 🧠 System Modules & Implementation
+
+### 1️⃣ Document Upload & Processing Module
+
+**Implementation:**
+- Users upload files (PDF, DOCX, PPTX)
+- Flask backend handles file upload
+- DOCX/PPTX converted to PDF
+
+**Technologies:**
+- Flask
+- docx2pdf
+- python-pptx
+
+**Flow:**
+Upload → Backend → Conversion → Storage
+
+---
+
+### 2️⃣ Text Extraction Module
+
+**Implementation:**
+- Extract text using `pdfplumber`
+- Page-wise extraction for synchronization
+- Stored in MySQL database
+
+**Flow:**
+PDF → Text Extraction → Database
+
+---
+
+### 3️⃣ AI Voice Assistant Module (Speech Processing)
+
+**Implementation:**
+- Uses Web Speech API
+- Provides playback controls
+
+**Features:**
+- Play / Pause / Resume / Stop  
+- Voice selection  
+
+**Flow:**
+Text → Speech Engine → Audio Output
+
+---
+
+### 4️⃣ Frontend Viewer Module
+
+**Implementation:**
+- Built using React
+- Displays PDF and controls audio
+
+**Components:**
+- PDFViewer.jsx  
+- AIVoiceAssistant.jsx  
+
+---
+
+### 5️⃣ Backend API Module
+
+**Implementation:**
+- REST APIs using Flask
+
+**Endpoints:**
+- POST `/upload`
+- GET `/pdf/<filename>`
+- GET `/pdf_text_pages`
+
+---
+
+### 6️⃣ Learning Analytics Module
+
+**Implementation:**
+- Tracks:
+  - Pages read  
+  - Playback actions  
+- Stores user interaction data  
+
+---
+
+## 🏗️ System Architecture
 
 ```
 ┌─────────────────────────────────────────────┐
-│                 Frontend (React)             │
+│                 Frontend (React)            │
 │                                             │
 │  ┌─────────────┐      ┌──────────────────┐  │
 │  │  PDFViewer  │      │ AIVoiceAssistant │  │
@@ -52,7 +146,7 @@ Built for students, visually impaired users, and self-learners who benefit from 
 └───────────────────┬─────────────────────────┘
                     │ HTTP (Axios)
 ┌───────────────────▼─────────────────────────┐
-│                Backend (Flask)               │
+│                Backend (Flask)              │
 │                                             │
 │  • Upload API       • PDF Text Extractor    │
 │  • File Converter   • MySQL Storage         │
