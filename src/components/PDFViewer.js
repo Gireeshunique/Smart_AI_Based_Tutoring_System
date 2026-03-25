@@ -168,7 +168,7 @@ function PDFViewer({ setPdfText, words, setWords, activeWord }) {
             const isActive = i === activeWord;
             return (
               <span
-                key={i}
+                key={`${i}-${activeWord}`}
                 ref={isActive ? activeSpanRef : null}
                 className={isActive ? "word-active" : "word-inactive"}
               >

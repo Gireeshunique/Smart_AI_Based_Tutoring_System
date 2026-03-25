@@ -6,7 +6,6 @@ import math
 import re
 from werkzeug.utils import secure_filename
 from google.cloud import texttospeech
-import google  as genai
 from file_converter import docx_to_pdf, pptx_to_pdf
 from speech import speech_to_text
 from ai_engine import explain_pdf

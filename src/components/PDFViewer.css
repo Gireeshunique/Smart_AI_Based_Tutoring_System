@@ -228,6 +228,7 @@ body {
   animation: fade-in 0.8s ease 0.3s both;
   transition: border-color 0.3s, box-shadow 0.3s;
   position: relative;
+  transform: translateZ(0);
 }
 
 .pdf-text-outside:focus-within {
@@ -261,13 +262,15 @@ body {
 .pdf-text-outside .word-active {
   display: inline-block;
   vertical-align: middle;
+  will-change: transform;
   padding: 1px 7px;
   border-radius: 6px;
   background-color: #7c3aed;
   color: #ffffff;
   font-weight: 700;
   box-shadow: 0 2px 12px rgba(124, 58, 237, 0.5);
-  transform: scale(1.08);
+  transform: scale(1.08) translateZ(0);
+  
 }
 
 .pdf-container::before {

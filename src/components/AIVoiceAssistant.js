@@ -1,6 +1,7 @@
 import { useRef, useState } from "react";
 import "./AIVoiceAssistant.css";
 
+
 const getWordArray = (text) => {
   if (!text || typeof text !== "string") return [];
   return text.toLowerCase().replace(/[^\w\s]/g, "").trim().split(/\s+/);
