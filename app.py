@@ -11,16 +11,10 @@ from speech import speech_to_text
 from ai_engine import explain_pdf
 from database import save_pdf, get_all_content
 from pdf_utils import extract_text_by_page
-
-
-
-import os, requests
-
+import requests
 import ollama
 
 OLLAMA_MODEL = "gemma2:2b"
-
-
 
 # ------------------------------------------------
 # APP SETUP
@@ -35,8 +29,58 @@ AUDIO_DIR = os.path.join(BASE_DIR, "static", "audio")
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 os.makedirs(AUDIO_DIR, exist_ok=True)
 
-# ✅ FIX 4: sys.path.append should come BEFORE local imports (moved to top)
 sys.path.insert(0, BASE_DIR)
+
+# ------------------------------------------------
+# VOICE CONFIG
+# Supported gender values: "female" | "male"
+# Each entry: (language_code, voice_name, ssml_gender)
+# ------------------------------------------------
+VOICE_OPTIONS = {
+    "female": [
+        ("en-IN", "en-IN-Wavenet-A", texttospeech.SsmlVoiceGender.FEMALE),
+        ("en-US", "en-US-Wavenet-F", texttospeech.SsmlVoiceGender.FEMALE),
+        ("en-GB", "en-GB-Wavenet-A", texttospeech.SsmlVoiceGender.FEMALE),
+        ("en-AU", "en-AU-Wavenet-A", texttospeech.SsmlVoiceGender.FEMALE),
+    ],
+    "male": [
+        ("en-IN", "en-IN-Wavenet-B", texttospeech.SsmlVoiceGender.MALE),
+        ("en-US", "en-US-Wavenet-D", texttospeech.SsmlVoiceGender.MALE),
+        ("en-GB", "en-GB-Wavenet-B", texttospeech.SsmlVoiceGender.MALE),
+        ("en-AU", "en-AU-Wavenet-B", texttospeech.SsmlVoiceGender.MALE),
+    ],
+}
+
+DEFAULT_SPEAKING_RATE = 0.95
+
+
+def get_tts_voice_params(gender: str):
+    """
+    Return (VoiceSelectionParams, AudioConfig) for the requested gender.
+    Falls back to female if gender not recognised.
+    Tries each voice in the list until one succeeds (handles unavailable voices).
+    Returns (voice_params, audio_config, error_str | None).
+    """
+    gender = gender.lower() if gender else "female"
+    if gender not in VOICE_OPTIONS:
+        gender = "female"
+
+    audio_config = texttospeech.AudioConfig(
+        audio_encoding=texttospeech.AudioEncoding.MP3,
+        speaking_rate=DEFAULT_SPEAKING_RATE,
+    )
+
+    options = VOICE_OPTIONS[gender]
+    for lang_code, voice_name, ssml_gender in options:
+        voice = texttospeech.VoiceSelectionParams(
+            language_code=lang_code,
+            name=voice_name,
+            ssml_gender=ssml_gender,
+        )
+        return voice, audio_config, None  # return first candidate; fallback happens per-sentence
+
+    # Should never reach here
+    return None, None, "No voice options configured"
 
 
 # ------------------------------------------------
@@ -48,14 +92,12 @@ def upload_file():
     if not file:
         return jsonify({"error": "No file uploaded"}), 400
 
-    # ✅ FIX 5: Handle empty filename
-    if file.filename == "" or file.filename is None:
+    if not file.filename:
         return jsonify({"error": "Filename is empty"}), 400
 
     filename = secure_filename(file.filename)
     ext = filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
 
-    # ✅ FIX 6: Validate extension BEFORE saving to disk
     allowed_exts = ["pdf", "docx", "ppt", "pptx"]
     if ext not in allowed_exts:
         return jsonify({"error": f"Unsupported file type '.{ext}'. Allowed: PDF, DOCX, PPT, PPTX"}), 400
@@ -66,7 +108,6 @@ def upload_file():
     pdf_path = None
 
     try:
-        # -------- CONVERT TO PDF --------
         if ext == "docx":
             pdf_path = upload_path.replace(".docx", ".pdf")
             docx_to_pdf(upload_path, pdf_path)
@@ -78,14 +119,10 @@ def upload_file():
         elif ext == "pdf":
             pdf_path = upload_path
 
-        # ✅ FIX 7: Verify converted PDF actually exists before proceeding
         if not os.path.exists(pdf_path):
             return jsonify({"error": "File conversion failed — PDF not generated"}), 500
 
-        # -------- PAGE-WISE TEXT --------
         pages = extract_text_by_page(pdf_path)
-
-        # ✅ FIX 8: Guard against None return from extract_text_by_page
         if not pages:
             pages = []
 
@@ -102,11 +139,10 @@ def upload_file():
             "message": "File uploaded successfully",
             "filename": os.path.basename(pdf_path),
             "pdf_url": f"http://localhost:5000/pdf/{os.path.basename(pdf_path)}",
-            "pages": pages
+            "pages": pages,
         })
 
     except Exception as e:
-        # ✅ FIX 9: Clean up uploaded file on error to avoid orphaned files
         if upload_path and os.path.exists(upload_path):
             os.remove(upload_path)
         print(f"Error during upload: {e}")
@@ -118,7 +154,6 @@ def upload_file():
 # ------------------------------------------------
 @app.route("/pdf/<path:filename>")
 def serve_pdf(filename):
-    # ✅ FIX 10: Check file exists before serving (prevents 500, gives clean 404)
     filepath = os.path.join(UPLOAD_DIR, filename)
     if not os.path.exists(filepath):
         return jsonify({"error": "File not found"}), 404
@@ -133,7 +168,6 @@ def get_pdf_text():
     docs = get_all_content()
     if not docs:
         return jsonify({"text": ""})
-    # ✅ FIX 11: Safe key access — use .get() to avoid KeyError
     return jsonify({"text": docs[0].get("content", "")})
 
 
@@ -145,7 +179,6 @@ def get_pdf_text_pages():
     docs = get_all_content()
     if not docs:
         return jsonify([])
-    # ✅ FIX 12: Safe key access
     return jsonify(docs[0].get("pages", []))
 
 
@@ -154,7 +187,6 @@ def get_pdf_text_pages():
 # ------------------------------------------------
 @app.route("/explain_pdf")
 def explain_pdf_api():
-    # ✅ FIX 13: Wrap in try/except — explain_pdf() can throw if no doc loaded
     try:
         result = explain_pdf()
         return jsonify({"sentences": result})
@@ -163,73 +195,82 @@ def explain_pdf_api():
 
 
 # ------------------------------------------------
-# GOOGLE NEURAL TTS
+# GOOGLE NEURAL TTS  — now accepts ?gender=male|female
 # ------------------------------------------------
 @app.route("/read_pdf")
 def read_pdf():
+    # Read gender from query param; default = female
+    gender = request.args.get("gender", "female").lower().strip()
+    if gender not in ("male", "female"):
+        gender = "female"
+
     docs = get_all_content()
     if not docs:
         return jsonify({"error": "No PDF found"}), 400
 
     text = docs[0].get("content", "").strip()
-
-    # ✅ FIX 14: Guard against empty content
     if not text:
         return jsonify({"error": "Document has no readable text"}), 400
 
     sentences = re.split(r'(?<=[.!?])\s+', text)
-    sentences = [s for s in sentences if len(s.strip()) > 10]
+    sentences = [s.strip() for s in sentences if len(s.strip()) > 10]
 
-    # ✅ FIX 15: Guard against no sentences found
     if not sentences:
         return jsonify({"error": "No readable sentences found in document"}), 400
 
+    # Build TTS client once
     try:
         client = texttospeech.TextToSpeechClient()
     except Exception as e:
         return jsonify({"error": f"TTS client init failed: {str(e)}"}), 500
 
-    voice = texttospeech.VoiceSelectionParams(
-        language_code="en-IN",
-        name="en-IN-Wavenet-A",
-        ssml_gender=texttospeech.SsmlVoiceGender.FEMALE
-    )
-
     audio_config = texttospeech.AudioConfig(
         audio_encoding=texttospeech.AudioEncoding.MP3,
-        speaking_rate=0.95
+        speaking_rate=DEFAULT_SPEAKING_RATE,
     )
+
+    # Ordered list of (lang_code, voice_name, ssml_gender) to try
+    voice_candidates = VOICE_OPTIONS[gender]
 
     response_data = []
 
     for i, sentence in enumerate(sentences):
-        # ✅ FIX 16: Wrap each TTS call — one bad sentence shouldn't kill the whole response
-        try:
-            tts_response = client.synthesize_speech(
-                input=texttospeech.SynthesisInput(text=sentence),
-                voice=voice,
-                audio_config=audio_config
-            )
+        audio_file = f"sentence_{i}.mp3"
+        audio_path = os.path.join(AUDIO_DIR, audio_file)
+        synthesized = False
 
-            audio_file = f"sentence_{i}.mp3"
-            audio_path = os.path.join(AUDIO_DIR, audio_file)
+        for lang_code, voice_name, ssml_gender in voice_candidates:
+            try:
+                voice = texttospeech.VoiceSelectionParams(
+                    language_code=lang_code,
+                    name=voice_name,
+                    ssml_gender=ssml_gender,
+                )
+                tts_response = client.synthesize_speech(
+                    input=texttospeech.SynthesisInput(text=sentence),
+                    voice=voice,
+                    audio_config=audio_config,
+                )
+                with open(audio_path, "wb") as f:
+                    f.write(tts_response.audio_content)
+                synthesized = True
+                break  # success — stop trying fallbacks
 
-            with open(audio_path, "wb") as f:
-                f.write(tts_response.audio_content)
+            except Exception as e:
+                print(f"TTS voice '{voice_name}' failed for sentence {i}: {e}")
+                continue  # try next candidate
 
-            duration = max(1, math.ceil(len(sentence.split()) / 2.2))
-
-            response_data.append({
-                "id": i,
-                "sentence": sentence,
-                "audio": f"/static/audio/{audio_file}",
-                "duration": duration
-            })
-
-        except Exception as e:
-            print(f"TTS failed for sentence {i}: {e}")
-            # Skip failed sentence, continue with rest
+        if not synthesized:
+            print(f"All TTS voices failed for sentence {i}, skipping.")
             continue
+
+        duration = max(1, math.ceil(len(sentence.split()) / 2.2))
+        response_data.append({
+            "id": i,
+            "sentence": sentence,
+            "audio": f"/static/audio/{audio_file}",
+            "duration": duration,
+        })
 
     if not response_data:
         return jsonify({"error": "TTS generation failed for all sentences"}), 500
@@ -242,16 +283,14 @@ def read_pdf():
 # ------------------------------------------------
 @app.route("/static/audio/<path:filename>")
 def serve_audio(filename):
-    # ✅ FIX 17: Check file exists before serving
     filepath = os.path.join(AUDIO_DIR, filename)
     if not os.path.exists(filepath):
         return jsonify({"error": "Audio file not found"}), 404
     return send_from_directory(AUDIO_DIR, filename)
 
 
-
 # ------------------------------------------------
-# SHARED HELPER
+# SHARED HELPER — Ollama query
 # ------------------------------------------------
 def query_ollama_model(question: str, context: str, model: str = OLLAMA_MODEL):
     prompt = (
@@ -268,13 +307,10 @@ def query_ollama_model(question: str, context: str, model: str = OLLAMA_MODEL):
     try:
         response = ollama.chat(
             model=model,
-            messages=[{"role": "user", "content": prompt}]
+            messages=[{"role": "user", "content": prompt}],
         )
         answer = response["message"]["content"].strip()
-
-        # Strip any remaining markdown symbols
         answer = answer.replace("**", "").replace("*", "").replace("##", "").replace("#", "")
-
         return answer or "Answer not found in document.", None
 
     except ollama.ResponseError as e:
@@ -282,7 +318,8 @@ def query_ollama_model(question: str, context: str, model: str = OLLAMA_MODEL):
 
     except Exception as e:
         return None, (jsonify({"error": f"Unexpected error: {str(e)}"}), 500)
-    
+
+
 # ------------------------------------------------
 # COMBINED VOICE + TEXT ROUTE
 # ------------------------------------------------
@@ -320,29 +357,26 @@ def ask():
         if not docs:
             return jsonify({
                 "question": question,
-                "error": "No document uploaded. Please upload a PDF first."
+                "error": "No document uploaded. Please upload a PDF first.",
             }), 400
 
         content = docs[0].get("content", "")
         if not content.strip():
             return jsonify({
                 "question": question,
-                "error": "Document has no readable content."
+                "error": "Document has no readable content.",
             }), 400
 
         answer, err = query_ollama_model(question, content[:1500])
         if err:
             return err
 
-        return jsonify({
-            "question": question,
-            "answer": answer
-        })
+        return jsonify({"question": question, "answer": answer})
 
     except Exception as e:
         print("Error in /ask:", e)
         return jsonify({"error": str(e)}), 500
-    
+
 
 # ------------------------------------------------
 # RUN
