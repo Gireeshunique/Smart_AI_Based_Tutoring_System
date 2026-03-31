@@ -58,7 +58,6 @@ const waitForVoices = () =>
 // ─────────────────────────────────────────────
 // COMPONENT
 // ─────────────────────────────────────────────
-
 function AIVoiceAssistant({ pdfText, setActiveWord, onComplete }) {
   const [voiceType,  setVoiceType]  = useState("female");
   const [isSpeaking, setIsSpeaking] = useState(false);
