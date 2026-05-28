@@ -5,21 +5,16 @@ import AIQuestionPage from "./components/AIQuestionPage";
 import LoginPage from "./components/LoginPage"; // 👈 import your login page
 
 function App() {
-  // ── Auth state ──────────────────────────────────────────────
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-
-  // ── PDF / AI state ──────────────────────────────────────────
-  const [pdfText, setPdfText]     = useState("");
-  const [words, setWords]         = useState([]);
+  const [pdfText, setPdfText] = useState("");
+  const [words, setWords] = useState([]);
   const [activeWord, setActiveWord] = useState(-1);
-  const [showQA, setShowQA]       = useState(false);
+  const [showQA, setShowQA] = useState(false);
 
-  // ── Show Login first ────────────────────────────────────────
   if (!isLoggedIn) {
     return <LoginPage onLogin={() => setIsLoggedIn(true)} />;
   }
 
-  // ── After login: PDF viewer  →  Q&A page ───────────────────
   return (
     <>
       {!showQA ? (

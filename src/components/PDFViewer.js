@@ -24,15 +24,15 @@ const getWordArray = (text) => {
 };
 
 function PDFViewer({ setPdfText, words, setWords, activeWord }) {
-  const [pdfUrl, setPdfUrl]                 = useState(null);
-  const [isReady, setIsReady]               = useState(false);
-  const [currentPage, setCurrentPage]       = useState(1);
-  const [totalPages, setTotalPages]         = useState(0);
+  const [pdfUrl, setPdfUrl] = useState(null);
+  const [isReady, setIsReady] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(0);
   const [pageBoundaries, setPageBoundaries] = useState([]);
-  const [fileName, setFileName]             = useState("");
+  const [fileName, setFileName] = useState("");
 
-  const fileInputRef  = useRef(null);
-  const scrollBoxRef  = useRef(null);
+  const fileInputRef = useRef(null);
+  const scrollBoxRef = useRef(null);
   const activeSpanRef = useRef(null);
 
   /* ── UPLOAD ── */
@@ -57,8 +57,8 @@ function PDFViewer({ setPdfText, words, setWords, activeWord }) {
       setPdfUrl(res.data.pdf_url);
       setTotalPages(res.data.pages.length);
 
-      const pageWordCounts = res.data.pages.map((p) =>
-        getWordArray(cleanExtractedText(p.text)).length
+      const pageWordCounts = res.data.pages.map(
+        (p) => getWordArray(cleanExtractedText(p.text)).length,
       );
 
       let cumulative = 0;
@@ -69,7 +69,7 @@ function PDFViewer({ setPdfText, words, setWords, activeWord }) {
 
       setPageBoundaries(boundaries);
 
-      const rawText     = res.data.pages.map((p) => p.text).join(" ");
+      const rawText = res.data.pages.map((p) => p.text).join(" ");
       const cleanedText = cleanExtractedText(rawText);
 
       setPdfText(cleanedText);
@@ -87,15 +87,16 @@ function PDFViewer({ setPdfText, words, setWords, activeWord }) {
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
         const container = scrollBoxRef.current;
-        const el        = activeSpanRef.current;
+        const el = activeSpanRef.current;
         if (!container || !el) return;
 
         const containerRect = container.getBoundingClientRect();
-        const elRect        = el.getBoundingClientRect();
-        const target        = container.scrollTop
-                            + (elRect.top - containerRect.top)
-                            - container.clientHeight / 2
-                            + el.offsetHeight / 2;
+        const elRect = el.getBoundingClientRect();
+        const target =
+          container.scrollTop +
+          (elRect.top - containerRect.top) -
+          container.clientHeight / 2 +
+          el.offsetHeight / 2;
 
         container.scrollTo({ top: target, behavior: "smooth" });
       });

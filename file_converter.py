@@ -3,6 +3,7 @@ from docx2pdf import convert
 from pptx import Presentation
 from reportlab.pdfgen import canvas
 
+
 def docx_to_pdf(input_path, output_path):
     pythoncom.CoInitialize()
     try:
