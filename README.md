@@ -21,6 +21,39 @@ This system integrates:
 - 📊 **Learning Analytics** to track user interactions  
 
 ---
+---
+
+# 📸 Project Screenshots
+
+## 🏠 Home Page
+
+![Home Page](assets/login.png)
+
+---
+
+## 📄 Document Upload
+
+![Upload](assets/UI.png)
+
+---
+
+## 👀 PDF Viewer
+
+![PDF Viewer](assets/Process.png)
+
+---
+
+## 🔊 AI Voice Assistant
+
+![Voice Assistant](assets/process1.png)
+
+---
+
+## 🏗 Output 
+
+![Architecture](assets/process2.png)
+
+---
 
 ## 🎯 Objectives
 
